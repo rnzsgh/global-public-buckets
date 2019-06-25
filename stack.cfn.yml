@@ -1,0 +1,97 @@
+---
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: StackSets public buckets example
+
+Parameters:
+
+  BucketPrefix:
+    Description: The bucket prefix
+    Type: String
+    MinLength: 3
+    MaxLength: 40
+
+
+Resources:
+
+  LoggingBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub ${BucketPrefix}-${AWS::Region}-logging
+      AccessControl: LogDeliveryWrite
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+  PublicBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref PublicBucket
+      PolicyDocument:
+        Statement:
+          - Action: s3:GetObject
+            Effect: Allow
+            Resource: !Sub ${PublicBucket.Arn}/*
+            Principal: '*'
+            Condition:
+              StringEquals:
+                s3:ExistingObjectTag/public: yes
+
+  PublicBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub ${BucketPrefix}-${AWS::Region}
+      LoggingConfiguration:
+        DestinationBucketName: !Ref LoggingBucket
+        LogFilePrefix: !Ref AWS::StackName
+      VersioningConfiguration:
+        Status: Enabled
+      AccessControl: PublicRead
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+Outputs:
+
+  PublicBucketName:
+    Value: !Ref PublicBucket
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicBucketName
+
+  PublicBucketArn:
+    Value: !GetAtt PublicBucket.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicBucketArn
+
+  PublicBucketDomainName:
+    Value: !GetAtt PublicBucket.DomainName
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicBucketDomainName
+
+  PublicBucketRegionalDomainName:
+    Value: !GetAtt PublicBucket.RegionalDomainName
+    Export:
+      Name: !Sub ${AWS::StackName}-RegionalDomainName
+
+  LoggingBucketName:
+    Value: !Ref LoggingBucket
+    Export:
+      Name: !Sub ${AWS::StackName}-LoggingBucketName
+
+  LoggingBucketArn:
+    Value: !GetAtt LoggingBucket.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-LoggingBucketArn
+
